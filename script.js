@@ -178,19 +178,118 @@
     };
   }
 
-  async function fetchDVF(lat, lon, dist) {
-    const url = `https://api.cquest.org/dvf?lat=${lat}&lon=${lon}&dist=${dist}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('DVF HTTP ' + res.status);
-    const data = await res.json();
-    return data.features || data.resultats || [];
+  // Les ventes sont normalisées vers une forme commune, quelle que soit la
+  // source : { date, valeur, surface, type, adresse }.
+  // Aucune des deux API n'est garantie disponible, d'où la bascule automatique.
+
+  function bbox(lat, lon, dist) {
+    const dLat = dist / 111320;
+    const dLon = dist / (111320 * Math.cos((lat * Math.PI) / 180));
+    return [lon - dLon, lat - dLat, lon + dLon, lat + dLat];
   }
+
+  function typeDepuisLibelle(texte) {
+    const t = (texte || '').toUpperCase();
+    if (t.includes('MAISON')) return 'Maison';
+    if (t.includes('APPARTEMENT')) return 'Appartement';
+    return '';
+  }
+
+  const SOURCES = [
+    {
+      nom: 'Cerema DVF+ (officiel)',
+      url: (lat, lon, dist) =>
+        'https://apidf-preprod.cerema.fr/dvf_opendata/geomutations/?in_bbox=' +
+        bbox(lat, lon, dist).join(','),
+      normalise: (data) =>
+        (data.features || data.results || []).map((f) => {
+          const p = f.properties || f;
+          return {
+            date: p.datemut,
+            valeur: parseFloat(p.valeurfonc),
+            surface: parseFloat(p.sbati),
+            type: typeDepuisLibelle(p.libtypbien),
+            adresse: p.l_adresse ? [].concat(p.l_adresse)[0] : '',
+            vente: !p.libnatmut || /vente/i.test(p.libnatmut)
+          };
+        })
+    },
+    {
+      nom: 'api.cquest.org (communautaire)',
+      url: (lat, lon, dist) => `https://api.cquest.org/dvf?lat=${lat}&lon=${lon}&dist=${dist}`,
+      normalise: (data) =>
+        (data.features || data.resultats || []).map((f) => {
+          const p = f.properties || f;
+          return {
+            date: p.date_mutation,
+            valeur: parseFloat(p.valeur_fonciere),
+            surface: parseFloat(p.surface_reelle_bati),
+            type: p.type_local || '',
+            adresse: [p.adresse_numero, p.adresse_nom_voie].filter(Boolean).join(' '),
+            vente: /vente/i.test(p.nature_mutation || '')
+          };
+        })
+    }
+  ];
+
+  // Une vente n'est exploitable que si prix, surface et date sont lisibles.
+  // Ce filtre garantit aussi qu'une réponse au format inattendu est traitée
+  // comme « pas de donnée », et déclenche la bascule vers la source suivante.
+  function estExploitable(v) {
+    return v && v.valeur > 0 && v.surface > 0 && !!v.date && !isNaN(new Date(v.date));
+  }
+
+  async function interroger(source, lat, lon, dist) {
+    const res = await fetch(source.url(lat, lon, dist));
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return source.normalise(await res.json()).filter(estExploitable);
+  }
+
+  // Essaie chaque source dans l'ordre, renvoie la première qui répond avec des données
+  async function fetchDVF(lat, lon, dist) {
+    const echecs = [];
+    for (const source of SOURCES) {
+      try {
+        const ventes = await interroger(source, lat, lon, dist);
+        if (ventes.length) return { ventes, source: source.nom };
+        echecs.push(`${source.nom} : aucune donnée`);
+      } catch (e) {
+        echecs.push(`${source.nom} : ${e.message}`);
+      }
+    }
+    throw new Error(echecs.join(' · '));
+  }
+
+  /* ---------- Diagnostic des sources ---------- */
+
+  document.getElementById('testerSources').addEventListener('click', async () => {
+    const el = $('sourcesStatus');
+    setStatus(el, '<span class="spinner"></span>Test des sources en cours…', 'info', true);
+
+    // Point de test : centre de Lille, secteur dense donc forcément pourvu en ventes
+    const lignes = [];
+    for (const source of SOURCES) {
+      const t0 = Date.now();
+      try {
+        const ventes = await interroger(source, 50.6292, 3.0573, 1000);
+        lignes.push(`✔ ${source.nom} — ${ventes.length} ventes en ${Date.now() - t0} ms`);
+        const datees = ventes.map((v) => v.date).filter(Boolean).sort();
+        if (datees.length) {
+          lignes.push(`   données de ${datees[0].slice(0, 7)} à ${datees[datees.length - 1].slice(0, 7)}`);
+        }
+      } catch (e) {
+        lignes.push(`✗ ${source.nom} — ${e.message}`);
+      }
+    }
+    const ok = lignes.some((l) => l.startsWith('✔'));
+    setStatus(el, lignes.join('\n'), ok ? 'ok' : 'error');
+  });
 
   /* ---------- Liquidité du secteur ---------- */
 
   function afficherLiquidite(ventes) {
     const el = $('liquiditeInfo');
-    const dates = ventes.map((p) => new Date(p.date_mutation)).filter((d) => !isNaN(d));
+    const dates = ventes.map((v) => new Date(v.date)).filter((d) => !isNaN(d));
 
     if (dates.length < 2) {
       setStatus(el, '', null);
@@ -267,14 +366,17 @@
       true
     );
 
-    let features;
+    let brut, sourceUtilisee;
     try {
-      features = await fetchDVF(geo.lat, geo.lon, rayon);
+      const reponse = await fetchDVF(geo.lat, geo.lon, rayon);
+      brut = reponse.ventes;
+      sourceUtilisee = reponse.source;
     } catch (e) {
       setStatus(
         statusEl,
-        `L'API DVF n'a pas répondu (${e.message}). Elle n'est pas garantie disponible en ` +
-          'permanence — ajoute des ventes manuellement via app.dvf.etalab.gouv.fr.',
+        `Aucune source DVF n'a répondu. Détail — ${e.message}. ` +
+          'Utilise le bouton « Tester les sources » ci-dessous, ou ajoute des ventes ' +
+          'manuellement via app.dvf.etalab.gouv.fr.',
         'error'
       );
       return;
@@ -284,25 +386,21 @@
     const dateLimite = new Date();
     dateLimite.setFullYear(dateLimite.getFullYear() - anneeMaxVal);
 
-    const ventes = features
-      .map((f) => f.properties || f)
-      .filter((p) => (p.nature_mutation || '').toLowerCase().includes('vente') && p.date_mutation)
-      .filter((p) => anneeMaxVal >= 99 || new Date(p.date_mutation) >= dateLimite);
+    const ventes = brut
+      .filter((v) => v.vente && v.date)
+      .filter((v) => anneeMaxVal >= 99 || new Date(v.date) >= dateLimite);
 
     afficherLiquidite(ventes);
 
     const comparables = ventes
-      .filter((p) => {
-        const s = parseFloat(p.surface_reelle_bati);
-        const v = parseFloat(p.valeur_fonciere);
-        return (
-          (p.type_local || '') === typeLocal &&
-          s >= surface * 0.6 &&
-          s <= surface * 1.5 &&
-          v > 1000
-        );
-      })
-      .sort((a, b) => new Date(b.date_mutation) - new Date(a.date_mutation))
+      .filter(
+        (v) =>
+          v.type === typeLocal &&
+          v.surface >= surface * 0.6 &&
+          v.surface <= surface * 1.5 &&
+          v.valeur > 1000
+      )
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
       .slice(0, 12);
 
     const periodeLabel = anneeMaxVal >= 99 ? 'sans limite de date' : `sur les ${anneeMaxVal} dernière(s) année(s)`;
@@ -319,18 +417,18 @@
 
     setStatus(
       statusEl,
-      `${comparables.length} vente(s) trouvée(s) autour de ${geo.label} (${periodeLabel}). Vérifie la liste avant d'analyser.`,
+      `${comparables.length} vente(s) trouvée(s) autour de ${geo.label} (${periodeLabel}), ` +
+        `source : ${sourceUtilisee}. Vérifie la liste avant d'analyser.`,
       'ok'
     );
 
-    comparables.forEach((p) => {
-      const voie = [p.adresse_numero, p.adresse_nom_voie].filter(Boolean).join(' ');
+    comparables.forEach((v) => {
       addCompRow(
         {
-          label: voie || p.code_postal || '',
-          prix: Math.round(parseFloat(p.valeur_fonciere)),
-          surface: p.surface_reelle_bati,
-          date: p.date_mutation || ''
+          label: v.adresse || '',
+          prix: Math.round(v.valeur),
+          surface: v.surface,
+          date: (v.date || '').slice(0, 10)
         },
         false
       );
