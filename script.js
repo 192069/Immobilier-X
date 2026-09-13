@@ -293,22 +293,31 @@
           tentatives.push(a);
         }
 
+        // On garde le détail par année : un fichier absent (404) et un blocage
+        // réseau/CORS ne se corrigent pas de la même façon.
+        const journal = [];
         const resultats = await Promise.all(
           tentatives.map(async (annee) => {
             try {
               const res = await fetch(
                 `https://files.data.gouv.fr/geo-dvf/latest/csv/${annee}/communes/${dep}/${citycode}.csv`
               );
-              if (!res.ok) return [];
-              return regrouperMutations(parseCSV(await res.text()));
+              if (!res.ok) {
+                journal.push(`${annee}: HTTP ${res.status}`);
+                return [];
+              }
+              const ventes = regrouperMutations(parseCSV(await res.text()));
+              journal.push(`${annee}: ${ventes.length} ventes`);
+              return ventes;
             } catch (e) {
+              journal.push(`${annee}: ${e.message}`);
               return [];
             }
           })
         );
 
         const toutes = resultats.flat();
-        if (!toutes.length) throw new Error('aucun fichier disponible');
+        if (!toutes.length) throw new Error(journal.join(', '));
         // filtrage par rayon réel autour du point
         return toutes.filter(
           (v) => !isNaN(v.lat) && !isNaN(v.lon) && distanceM(lat, lon, v.lat, v.lon) <= dist
@@ -392,13 +401,13 @@
     const el = $('sourcesStatus');
     setStatus(el, '<span class="spinner"></span>Test des sources en cours…', 'info', true);
 
-    // Point de test : centre de Lille, secteur dense donc forcément pourvu en ventes
+    // Point de test : Denain, commune de taille modeste (fichier léger)
     const lignes = [];
     for (const source of SOURCES) {
       const t0 = Date.now();
       try {
         const ventes = await interroger(source, {
-          lat: 50.6292, lon: 3.0573, dist: 1000, citycode: '59350', annees: 2
+          lat: 50.3289, lon: 3.3947, dist: 2000, citycode: '59172', annees: 3
         });
         lignes.push(`✔ ${source.nom} — ${ventes.length} ventes en ${Date.now() - t0} ms`);
         const datees = ventes.map((v) => v.date).filter(Boolean).sort();
