@@ -1,0 +1,43 @@
+name: Mettre à jour les données DVF
+
+on:
+  # Bouton manuel dans l'onglet Actions
+  workflow_dispatch:
+  # Le 5 de chaque mois — les nouvelles années paraissent en cours d'année
+  schedule:
+    - cron: '0 4 5 * *'
+  # Relance automatique si tu modifies le périmètre
+  push:
+    paths:
+      - 'dvf.config.json'
+      - 'scripts/build-dvf.mjs'
+
+permissions:
+  contents: write
+
+jobs:
+  collecte:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Télécharger et compacter les ventes
+        run: node scripts/build-dvf.mjs
+
+      - name: Publier les fichiers dans le dépôt
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add data/
+          if git diff --staged --quiet; then
+            echo "Aucun changement"
+          else
+            git commit -m "Données DVF mises à jour"
+            git push
+          fi
