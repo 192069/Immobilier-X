@@ -1,0 +1,4 @@
+id_mutation,date_mutation,nature_mutation,valeur_fonciere,adresse_numero,adresse_nom_voie,id_parcelle,type_local,surface_reelle_bati,longitude,latitude
+2025-1040582,2025-06-12,Vente,30000,4,RUE DE VRAIGNES,804130000A0339,Maison,44,3.071252,49.90309
+2024-978985,2024-07-19,Vente,142000,8,GR GRANDE RUE,804130000A0324,Maison,83,3.072694,49.903417
+2022-1343963,2022-12-21,Vente,220000,18,GR GRANDE RUE,804130000A0406,Maison,314,3.07258,49.90213

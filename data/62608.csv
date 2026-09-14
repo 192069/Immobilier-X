@@ -1,0 +1,4 @@
+id_mutation,date_mutation,nature_mutation,valeur_fonciere,adresse_numero,adresse_nom_voie,id_parcelle,type_local,surface_reelle_bati,longitude,latitude
+2025-786046,2025-09-26,Vente,160000,26,RUE DE PERONNE,626080000A0217,Maison,67,3.02247,50.069677
+2025-786046,2025-09-26,Vente,160000,26,RUE DE PERONNE,626080000A0217,Maison,67,3.02247,50.069677
+2023-820682,2023-11-28,Vente,92000,25,RUE DE PERONNE,626080000A0294,Maison,100,3.023455,50.068784

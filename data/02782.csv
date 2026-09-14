@@ -1,0 +1,4 @@
+id_mutation,date_mutation,nature_mutation,valeur_fonciere,adresse_numero,adresse_nom_voie,id_parcelle,type_local,surface_reelle_bati,longitude,latitude
+2024-18629,2024-08-16,Vente,45000,1,RUE NEUVE,027820000A0671,Maison,114,3.166845,49.925091
+2023-22740,2023-11-03,Vente,70000,14,RUE DE LA 24E DIV BRITANNIQUE,027820000A0019,Maison,81,3.167029,49.926589
+2022-17590,2022-01-15,Vente,70000,10,RUE DE LA CITE,027820000A0195,Maison,52,3.167368,49.923796

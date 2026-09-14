@@ -1,0 +1,5 @@
+id_mutation,date_mutation,nature_mutation,valeur_fonciere,adresse_numero,adresse_nom_voie,id_parcelle,type_local,surface_reelle_bati,longitude,latitude
+2023-15131,2023-01-25,Vente,191400,1,CHE ROMERET,021700000B0360,Maison,146,3.418918,49.792383
+2023-20304,2023-07-12,Vente,185000,24,RUE DE L ECLUSE,021700000B0190,Maison,128,3.417922,49.788463
+2023-23687,2023-12-02,Vente,115000,7,RUE D EN HAUT,021700000B0245,Maison,72,3.420567,49.792479
+2023-23687,2023-12-02,Vente,115000,7,RUE D EN HAUT,021700000B0245,Maison,72,3.420567,49.792479

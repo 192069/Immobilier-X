@@ -1,0 +1,17 @@
+{
+  "genere_le": "2026-09-14",
+  "centre": {
+    "nom": "Iwuy",
+    "code_commune": "59321"
+  },
+  "rayon_km": 40,
+  "annees_demandees": [
+    2026,
+    2025,
+    2024,
+    2023,
+    2022
+  ],
+  "communes": 582,
+  "ventes": 62842
+}

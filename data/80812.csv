@@ -1,0 +1,3 @@
+id_mutation,date_mutation,nature_mutation,valeur_fonciere,adresse_numero,adresse_nom_voie,id_parcelle,type_local,surface_reelle_bati,longitude,latitude
+2024-981431,2024-10-17,Vente,192000,37,RUE BASSE,808120000A0352,Maison,140,3.066614,49.884543
+2022-1337709,2022-07-26,Vente,55000,19,RUE BASSE,808120000A0332,Maison,51,3.06629,49.886379

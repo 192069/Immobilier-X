@@ -1,0 +1,4 @@
+id_mutation,date_mutation,nature_mutation,valeur_fonciere,adresse_numero,adresse_nom_voie,id_parcelle,type_local,surface_reelle_bati,longitude,latitude
+2023-19919,2023-07-26,Vente,20000,12,GR GRANDE RUE,026470000A0063,Maison,110,3.581695,50.042066
+2022-24430,2022-07-28,Vente,72000,2,RUE DE L EGLISE,026470000A0088,Maison,128,3.584897,50.043666
+2022-25180,2022-08-25,Vente,107000,2,RUE D EN HAUT,026470000A0020,Maison,86,3.584816,50.041194
