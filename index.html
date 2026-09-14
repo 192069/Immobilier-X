@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 
@@ -267,6 +267,8 @@
       <div class="score-detail" id="verdictDetail"></div>
     </div>
 
+    <h3 class="groupe">Le marché du secteur</h3>
+
     <div class="metrics">
       <div class="metric"><div class="m-label">Prix/m² de l'annonce</div><div class="m-value" id="prixM2"></div></div>
       <div class="metric"><div class="m-label">Prix/m² médian secteur</div><div class="m-value" id="prixM2Comp"></div></div>
@@ -274,7 +276,30 @@
       <div class="metric"><div class="m-label">Marge de négociation</div><div class="m-value" id="marge"></div></div>
     </div>
 
-    <p class="note" id="dispersionInfo" style="margin:-4px 4px 14px;"></p>
+    <p class="note" id="dispersionInfo" style="margin:-4px 4px 18px;"></p>
+
+    <h3 class="groupe">À quel prix ça devient intéressant</h3>
+
+    <div class="panel" id="prixCibleCard">
+      <div class="metrics">
+        <div class="metric"><div class="m-label">Prix cible (marge visée)</div><div class="m-value" id="prixCible"></div></div>
+        <div class="metric"><div class="m-label">Prix plafond (marge nulle)</div><div class="m-value" id="prixPlafond"></div></div>
+      </div>
+      <p class="hint" id="prixCibleHint" style="margin:14px 0 0;"></p>
+    </div>
+
+    <div class="panel" id="curseurCard">
+      <h2>Simuler un autre prix d'achat</h2>
+      <p class="hint">Fais glisser pour voir la marge évoluer. Tous les calculs suivent.</p>
+      <div class="curseur-ligne">
+        <span class="curseur-valeur" id="curseurValeur">—</span>
+        <span class="curseur-marge" id="curseurMarge">—</span>
+      </div>
+      <input type="range" id="curseurPrix" min="0" max="100" value="50">
+      <button class="btn-ghost" id="curseurReset" type="button">Revenir au prix de l'annonce (<span id="prixAnnonceInitial"></span>)</button>
+    </div>
+
+    <h3 class="groupe">La rentabilité</h3>
 
     <div class="panel" id="portageCard">
       <h2>Financement &amp; portage</h2>
@@ -312,6 +337,8 @@
       </div>
       <div class="status show" id="dpeVerdict"></div>
     </div>
+
+    <h3 class="groupe">Selon ta stratégie</h3>
 
     <div class="panel" id="fiscaliteCard" style="display:none;">
       <h2>Fiscalité de la revente</h2>
@@ -401,6 +428,6 @@
   <div class="inner"><button id="analyserSticky" type="button">Analyser ce bien</button></div>
 </div>
 
-<script src="script.js?v=6"></script>
+<script src="script.js?v=7"></script>
 </body>
 </html>
