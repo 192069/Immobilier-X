@@ -37,7 +37,18 @@ jobs:
           git add data/
           if git diff --staged --quiet; then
             echo "Aucun changement"
-          else
-            git commit -m "Données DVF mises à jour"
-            git push
+            exit 0
           fi
+          git commit -m "Données DVF mises à jour"
+          # Le dépôt a pu bouger pendant la collecte (elle dure plusieurs
+          # minutes) : on rejoue notre commit par-dessus, puis on réessaie.
+          for essai in 1 2 3; do
+            if git push; then
+              echo "Publié"
+              exit 0
+            fi
+            echo "Push refusé, synchronisation puis nouvelle tentative ($essai)"
+            git pull --rebase origin main || exit 1
+          done
+          echo "Échec après 3 tentatives"
+          exit 1
