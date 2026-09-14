@@ -1,0 +1,17 @@
+{
+  "_commentaire": "Périmètre des données DVF récupérées automatiquement. Modifie rayon_km puis relance le workflow pour élargir la zone.",
+
+  "centre": {
+    "nom": "Iwuy",
+    "code_commune": "59321"
+  },
+
+  "rayon_km": 40,
+
+  "annees": 3,
+
+  "_aide": {
+    "rayon_km": "40 km couvre Cambrai, Valenciennes, Douai, Denain, Caudry, Le Cateau. 60 km ajoute Lille, Arras, Maubeuge. 100 km ajoute Amiens, Saint-Quentin, Lens, Béthune — environ 3000 communes et un dépôt lourd.",
+    "annees": "Nombre d'années de ventes à conserver. Les données paraissent avec environ un an de décalage."
+  }
+}
