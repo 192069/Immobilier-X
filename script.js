@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const VERSION = 'v6 — 13/09/2026';
+  const VERSION = 'v7 — 13/09/2026';
   const $ = (id) => document.getElementById(id);
   const HISTORIQUE_KEY = 'analyseAnnonceHistorique';
 
@@ -862,7 +862,7 @@
   let derniereAnalyse = null;
   let derniereAnalyseResume = '';
 
-  $('analyser').addEventListener('click', () => {
+  function lancerAnalyse() {
     const prix = num('prix');
     const surface = num('surface');
     const dpe = $('dpe').value;
@@ -892,6 +892,8 @@
       );
       return;
     }
+
+    if (!$('prixAnnonceInitial').textContent) $('prixAnnonceInitial').textContent = eur(prix);
 
     const prixM2Annonce = prix / surface;
 
@@ -1010,6 +1012,62 @@
       );
     }
 
+    // --- À quel prix d'achat l'opération devient intéressante ---
+    // On inverse le calcul de marge. Le portage dépend lui-même du prix
+    // (on emprunte prix + travaux - apport), d'où la résolution ci-dessous :
+    //   marge = produitNet - prix(1+k) - travaux - [(prix + travaux - apport)·r + TF]
+    // en posant marge = v·prix, on isole prix.
+    // La marge n'est pas linéaire en prix : au-delà d'un certain apport
+    // l'emprunt tombe à zéro. On résout donc par dichotomie, en réutilisant
+    // exactement la même formule que celle affichée plus haut.
+    function margePourPrix(p) {
+      const emprunt = Math.max(0, p + travaux - num('apport'));
+      const portage =
+        emprunt * (num('tauxEmprunt') / 100) * dureeAns +
+        emprunt * (num('assuranceEmprunt') / 100) * dureeAns +
+        taxeProrata;
+      return produitNet - p * (1 + fraisNotairePct / 100) - travaux - portage;
+    }
+
+    function prixPourMarge(margePct) {
+      // marge(p) - margePct%·p est strictement décroissante en p
+      const objectif = (p) => margePourPrix(p) - p * (margePct / 100);
+      if (objectif(0) <= 0) return 0;
+      let bas = 0;
+      let haut = Math.max(produitNet, prix) * 2 + 1000;
+      for (let i = 0; i < 60; i++) {
+        const milieu = (bas + haut) / 2;
+        if (objectif(milieu) > 0) bas = milieu;
+        else haut = milieu;
+      }
+      return bas;
+    }
+    const prixCible = prixPourMarge(margeViseePct);
+    const prixPlafond = prixPourMarge(0);
+
+    $('prixCible').textContent = prixCible > 0 ? eur(prixCible) : 'aucun';
+    $('prixPlafond').textContent = prixPlafond > 0 ? eur(prixPlafond) : 'aucun';
+    $('prixCibleHint').textContent =
+      prixCible > 0
+        ? `Au-dessus de ${eur(prixPlafond)}, l'opération est perdante. Pour dégager ` +
+          `${margeViseePct}% de marge, il faut acheter à ${eur(prixCible)} ou moins — ` +
+          `soit ${pct(((prixCible - prix) / prix) * 100)} par rapport au prix affiché.`
+        : "Même à prix nul, l'opération ne dégage pas la marge visée : les travaux, frais et portage dépassent la valeur de revente.";
+
+    // Curseur : borné autour du prix affiché et du prix plafond
+    const curseur = $('curseurPrix');
+    if (!curseur.dataset.actif) {
+      const haut = Math.max(prix, prixPlafond > 0 ? prixPlafond : prix) * 1.15;
+      curseur.min = Math.round(haut * 0.25);
+      curseur.max = Math.round(haut);
+      curseur.step = 500;
+      curseur.value = Math.round(prix);
+    }
+    $('curseurValeur').textContent = eur(prix);
+    $('curseurMarge').textContent = signedEur(marge);
+    $('curseurMarge').style.color =
+      marge >= prix * (margeViseePct / 100) ? 'var(--mint)' : marge >= 0 ? 'var(--amber)' : 'var(--rose)';
+
     afficherFiscalite(marge, dureeMois);
     afficherDivision(surface, valeurBase);
 
@@ -1036,7 +1094,30 @@
 
     setStatus($('copieStatus'), '', null);
     $('results').style.display = 'block';
-    $('results').scrollIntoView({ behavior: 'smooth' });
+    return true;
+  }
+
+  $('analyser').addEventListener('click', () => {
+    if (lancerAnalyse()) $('results').scrollIntoView({ behavior: 'smooth' });
+  });
+
+  /* ---------- Curseur de prix ---------- */
+
+  // Le curseur réécrit le prix et relance l'analyse : tous les blocs
+  // (marge, travaux, fiscalité, division) se recalculent ensemble.
+  $('curseurPrix').addEventListener('input', (e) => {
+    const curseur = e.target;
+    curseur.dataset.actif = '1';
+    $('prix').value = curseur.value;
+    lancerAnalyse();
+    curseur.dataset.actif = '';
+  });
+
+  $('curseurReset').addEventListener('click', () => {
+    const curseur = $('curseurPrix');
+    delete curseur.dataset.actif;
+    $('prix').value = $('prixAnnonceInitial').textContent.replace(/[^\d]/g, '');
+    lancerAnalyse();
   });
 
   /* ---------- Copie du résumé ---------- */
